@@ -5,10 +5,12 @@ using System.Linq;
 
 public class Jugar : Humano
 {
+    private IAEye vision;
     private void Awake()
     {
         typestate = TypeState.Jugar;
         LocadComponent();
+        vision = this.GetComponent<IAEye>();
     }
 
     public override void Enter()
@@ -23,6 +25,14 @@ public class Jugar : Humano
             base.Execute();
             return;
         }
+        // Primero verificar si hay juguetes visibles
+        vision.ScanForToys();
+        if (vision.currentToyInSight != null)
+        {
+            _StateMachine.ChangeState(TypeState.FollowToy);
+            return;
+        }
+
 
         // Consumir energía
         _DataAgent.DiscountEnergy();
@@ -51,5 +61,9 @@ public class Jugar : Humano
         }
 
         base.Execute();
+    }
+    public override void Exit()
+    {
+
     }
 }

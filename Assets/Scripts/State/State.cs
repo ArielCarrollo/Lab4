@@ -2,7 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-public enum TypeState { Jugar,Comer,Banno,Dormir, FollowToy}
+public enum TypeState
+{
+    Jugar,
+    Comer,
+    Dormir,
+    Banno,
+    FollowToy
+}
 public class State : MonoBehaviour
 {
     public TypeState typestate;

@@ -5,6 +5,7 @@ using System.Linq;
 
 public class Dormir : Humano
 {
+    private IAEye vision;
     private float sleepRecoveryRate = 0.1f;
     private float energyRecoveryRate = 0.05f;
     private bool movingToBed = true;
@@ -13,6 +14,7 @@ public class Dormir : Humano
     {
         typestate = TypeState.Dormir;
         LocadComponent();
+        vision = this.GetComponent<IAEye>();
     }
 
     public override void Enter()
@@ -26,6 +28,12 @@ public class Dormir : Humano
     {
         if (movingToBed)
         {
+            vision.ScanForToys();
+            if (vision.currentToyInSight != null)
+            {
+                _StateMachine.ChangeState(TypeState.FollowToy);
+                return;
+            }
             if (_Movement.IsDone())
             {
                 movingToBed = false;
@@ -33,6 +41,7 @@ public class Dormir : Humano
             }
             return;
         }
+
 
         // Recuperación de energía (siempre activa)
         _DataAgent.Energy.value = Mathf.Min(1f, _DataAgent.Energy.value + energyRecoveryRate * Time.deltaTime);

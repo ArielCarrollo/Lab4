@@ -4,29 +4,28 @@ using UnityEngine;
 
 public class StateMachine : MonoBehaviour
 {
-    public State[] states ;
+    public State[] states;
     public State currentState = null;
-    public TypeState Startstate;
-    // Start is called before the first frame update
+    public TypeState Startstate = TypeState.Jugar; // Estado inicial siempre es Jugar
+
     void Start()
     {
         states = GetComponents<State>();
-         
         ChangeState(Startstate);
     }
+
     public void ChangeState(TypeState type)
     {
-        foreach (var state in states) {
-
-            if (((State)state).typestate == type)
+        foreach (var state in states)
+        {
+            if (state.typestate == type)
             {
                 if (currentState != null)
                     currentState.Exit();
 
-                ((State)state).Enter();
-                currentState = ((State)state);
+                state.Enter();
+                currentState = state;
                 state.enabled = true;
-
             }
             else
             {
@@ -34,9 +33,10 @@ public class StateMachine : MonoBehaviour
             }
         }
     }
+
     private void Update()
     {
-        if(currentState!=null)
+        if (currentState != null)
         {
             currentState.Execute();
         }

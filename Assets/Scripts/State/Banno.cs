@@ -5,6 +5,7 @@ using System.Linq;
 
 public class Banno : Humano
 {
+    private IAEye vision;
     private float bathroomTime = 3f;
     private float timer = 0f;
 
@@ -12,6 +13,7 @@ public class Banno : Humano
     {
         typestate = TypeState.Banno;
         LocadComponent();
+        vision = this.GetComponent<IAEye>();
     }
 
     public override void Enter()
@@ -23,6 +25,12 @@ public class Banno : Humano
 
     public override void Execute()
     {
+        vision.ScanForToys();
+        if (vision.currentToyInSight != null)
+        {
+            _StateMachine.ChangeState(TypeState.FollowToy);
+            return;
+        }
         if (_DataAgent.IsMoving || !_Movement.IsDone())
         {
             base.Execute();

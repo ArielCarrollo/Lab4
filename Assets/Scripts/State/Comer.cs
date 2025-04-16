@@ -5,6 +5,7 @@ using System.Linq;
 
 public class Comer : Humano
 {
+    private IAEye vision;
     private float eatingTime = 5f;
     private float timer = 0f;
 
@@ -12,6 +13,7 @@ public class Comer : Humano
     {
         typestate = TypeState.Comer;
         LocadComponent();
+        vision = this.GetComponent<IAEye>();
     }
 
     public override void Enter()
@@ -22,6 +24,12 @@ public class Comer : Humano
 
     public override void Execute()
     {
+        vision.ScanForToys();
+        if (vision.currentToyInSight != null)
+        {
+            _StateMachine.ChangeState(TypeState.FollowToy);
+            return;
+        }
         if (_DataAgent.IsMoving || !_Movement.IsDone()) return;
 
         timer += Time.deltaTime;

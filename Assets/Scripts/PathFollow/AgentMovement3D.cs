@@ -77,4 +77,12 @@ public class AgentMovement3D : MonoBehaviour
         navAgent.angularSpeed = angularSpeed;
         navAgent.acceleration = accel;
     }
+    public bool IsMovingToTarget(Transform target)
+    {
+        if (!navAgent.enabled || !isMoving) return false;
+
+        // Verificar si el agente se está moviendo hacia el objetivo específico
+        return navAgent.destination == target.position &&
+               Vector3.Distance(transform.position, target.position) > navAgent.stoppingDistance;
+    }
 }
