@@ -37,4 +37,12 @@ public class IAEye : MonoBehaviour
             }
         }
     }
+    void OnDrawGizmosSelected()
+    {
+        if (dataView == null) return;
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, dataView.distance);
+    }
+
 }
