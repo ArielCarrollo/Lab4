@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
 public class NavMeshMasterSystem : MonoBehaviour
@@ -7,7 +7,7 @@ public class NavMeshMasterSystem : MonoBehaviour
     public NavMeshAgent agent;
     public Transform target; // Para Raycast y TargetReachable
 
-    [Header("Configuraci�n")]
+    [Header("Configuración")]
     public float sampleRadius = 1f;
     public float randomRange = 10f;
     public float edgeCheckFrequency = 0.5f;
@@ -34,7 +34,7 @@ public class NavMeshMasterSystem : MonoBehaviour
             }
         }
 
-        // Tecla 2: MoveToTargetPosition (Mover a posici�n espec�fica)
+        // Tecla 2: MoveToTargetPosition (Mover a posición específica)
         if (Input.GetKeyDown(KeyCode.Alpha2) && target != null)
         {
             if (MoveToTargetPosition(target.position))
@@ -52,7 +52,7 @@ public class NavMeshMasterSystem : MonoBehaviour
             }
         }
 
-        // Tecla 4: Raycast (Verificar l�nea de visi�n)
+        // Tecla 4: Raycast (Verificar línea de visión)
         if (Input.GetKeyDown(KeyCode.Alpha4) && target != null)
         {
             Vector3 hitPos;
@@ -60,14 +60,15 @@ public class NavMeshMasterSystem : MonoBehaviour
             Debug.Log(blocked ? $"Camino bloqueado en {hitPos}" : "Camino despejado");
         }
 
-        // Tecla 5: FindClosestEdge (Borde m�s cercano)
+        // Tecla 5: FindClosestEdge (Borde más cercano)
         if (Input.GetKeyDown(KeyCode.Alpha5))
         {
             Vector3 edgePos;
             float distance;
             if (FindClosestEdge(transform.position, out edgePos, out distance))
             {
-                Debug.Log($"Borde m�s cercano a {distance} metros en {edgePos}");
+                Debug.Log($"Borde más cercano a {distance} metros en {edgePos}");
+                agent.SetDestination(edgePos);
             }
         }
 
@@ -112,49 +113,103 @@ public class NavMeshMasterSystem : MonoBehaviour
     bool CalculatePath(Vector3 targetPos)
     {
         currentPath = new NavMeshPath();
-        if (NavMesh.CalculatePath(transform.position, targetPos, NavMesh.AllAreas, currentPath))
+
+        // Aseguramos que la posición del agente esté sobre el NavMesh
+        if (!NavMesh.SamplePosition(transform.position, out NavMeshHit startHit, sampleRadius, NavMesh.AllAreas))
         {
-            agent.SetPath(currentPath);
-            if (showVisuals) DrawPath(currentPath);
-            return true;
+            Debug.LogError("La posición del agente NO está sobre el NavMesh.");
+            return false;
         }
+
+        // Aseguramos que la posición del target esté sobre el NavMesh
+        if (!NavMesh.SamplePosition(targetPos, out NavMeshHit targetHit, sampleRadius, NavMesh.AllAreas))
+        {
+            Debug.LogError("La posición del target NO está sobre el NavMesh.");
+            return false;
+        }
+
+        // Intentamos calcular el path
+        if (NavMesh.CalculatePath(startHit.position, targetHit.position, NavMesh.AllAreas, currentPath))
+        {
+            if (currentPath.status == NavMeshPathStatus.PathComplete)
+            {
+                agent.SetPath(currentPath);
+                if (showVisuals) DrawPath(currentPath);
+                Debug.Log("✅ Path hacia target calculado exitosamente.");
+                return true;
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ Path hacia target es incompleto. Status: " + currentPath.status);
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ No se pudo calcular el path hacia el target.");
+        }
+
         return false;
     }
+
 
     // 4. NavMeshRaycast (Tecla 4)
     bool NavMeshRaycast(Vector3 start, Vector3 end, out Vector3 hitPos)
     {
-        start.y += 0.5f;
-        end.y += 0.5f;
-        bool blocked = NavMesh.Raycast(start, end, out NavMeshHit hit, NavMesh.AllAreas);
+        hitPos = Vector3.zero;
+
+        if (!NavMesh.SamplePosition(start, out NavMeshHit startHit, sampleRadius, NavMesh.AllAreas) ||
+            !NavMesh.SamplePosition(end, out NavMeshHit endHit, sampleRadius, NavMesh.AllAreas))
+        {
+            Debug.LogWarning("Start o End están fuera del NavMesh.");
+            return true;
+        }
+
+        bool blocked = NavMesh.Raycast(startHit.position, endHit.position, out NavMeshHit hit, NavMesh.AllAreas);
         hitPos = hit.position;
 
         if (showVisuals)
         {
-            Debug.DrawLine(start, end, blocked ? Color.red : Color.green, 2f);
+            Debug.DrawLine(startHit.position, endHit.position, blocked ? Color.red : Color.green, 2f);
             if (blocked) Debug.DrawRay(hitPos, Vector3.up * 2f, Color.yellow, 2f);
         }
+
         return blocked;
     }
+
 
     // 5. FindClosestEdge (Tecla 5)
     bool FindClosestEdge(Vector3 position, out Vector3 edgePos, out float distance)
     {
-        if (NavMesh.FindClosestEdge(position, out NavMeshHit hit, NavMesh.AllAreas))
-        {
-            edgePos = hit.position;
-            distance = hit.distance;
-            if (showVisuals)
-            {
-                DrawCircle(position, distance, Color.magenta);
-                Debug.DrawRay(edgePos, Vector3.up * 3f, Color.magenta, edgeCheckFrequency);
-            }
-            return true;
-        }
         edgePos = Vector3.zero;
         distance = 0f;
+
+        if (NavMesh.SamplePosition(position, out NavMeshHit sampledHit, sampleRadius, NavMesh.AllAreas))
+        {
+            if (NavMesh.FindClosestEdge(sampledHit.position, out NavMeshHit edgeHit, NavMesh.AllAreas))
+            {
+                edgePos = edgeHit.position;
+                distance = edgeHit.distance;
+
+                if (showVisuals)
+                {
+                    DrawCircle(sampledHit.position, distance, Color.magenta);
+                    Debug.DrawRay(edgePos, Vector3.up * 3f, Color.magenta, edgeCheckFrequency);
+                }
+                return true;
+            }
+            else
+            {
+                Debug.LogWarning("No se encontró borde cercano.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Posición no está en el NavMesh.");
+        }
+
         return false;
     }
+
 
     void UpdateEdgeChecker()
     {
@@ -170,11 +225,12 @@ public class NavMeshMasterSystem : MonoBehaviour
 
     void DrawPath(NavMeshPath path)
     {
-        if (path.corners.Length < 2) return;
+        if (path == null || path.corners.Length < 2) return;
 
         for (int i = 0; i < path.corners.Length - 1; i++)
         {
-            Debug.DrawLine(path.corners[i], path.corners[i + 1], Color.cyan, 2f);
+            Debug.DrawLine(path.corners[i], path.corners[i + 1], Color.cyan, 3f);
+            Debug.DrawRay(path.corners[i], Vector3.up * 0.5f, Color.white, 3f);
         }
     }
 
